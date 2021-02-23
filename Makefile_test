@@ -1,0 +1,117 @@
+# Name: Makefile
+# Author: Vortex NTNU (H. Eiring, I. E. Høivik, Ø. Solbø, B. Visockis)
+# License: GPLv3
+# Copyright: 2021 Vortex NTNU
+
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+
+# DEVICE ....... The AVR device you compile for
+# F_CPU ........ Target AVR clock rate in Hertz
+# OBJECTS ...... The object files created from your source files. This list is
+#                usually the same as the list of source files with suffix ".o".
+# PROGRAMMER ... Options to avrdude which define the hardware you use for
+#                uploading to the AVR and the interface where this hardware
+#                is connected.
+# FUSES ........ Parameters for avrdude to flash the fuses appropriately.
+
+BIN			= main
+BINARY		= main.bin
+#SOURCES		= main.c Clamp.c I2CSlave.c Init.c LEDs.c Thrusters.c
+#OBJECTS		= main.o
+#OBJECTS		= main.o Clamp.o I2CSlave.o Init.o LEDs.o Thrusters.o
+INCLUDES 	= -I./include -I/usr/lib/avr/include
+
+BUILDDIR = build
+SOURCEDIR = src
+HEADERDIR = include
+
+DEVICE		= ATMEGA2560
+MCU			= atmega2560
+F_CPU  		= 16000000UL
+TARGET 		= main
+CFLAGS  = -Wall -Os -DF_CPU=$(F_CPU) -mmcu=$(MCU)
+
+CC			= avr-gcc
+OBJCOPY		= avr-objcopy
+PORT		= /dev/ttyACM0
+BAUDRATE	= 115200
+PROGRAMMER	= avrisp2
+FUSES		= -U lfuse:w:0x02:m -U hfuse:w:0x99:m -U efuse:w:0xFF:m -U lock:w:0xFF:m 
+
+AVRDUDE = avrdude -c $(PROGRAMMER) -p $(DEVICE) -P ${PORT} -b $(BAUDRATE)
+COMPILE = $(CC) -Wall -Os -DF_CPU=$(F_CPU) -mmcu=$(MCU) $(INCLUDES)
+
+SOURCES := $(shell find $(SOURCEDIR) -name '*.c')
+
+SOURCES = $(wildcard $(SOURCEDIR)/*.c)
+
+# Get list of object files, with paths
+OBJECTS := $(addprefix $(BUILDDIR)/,$(SOURCES:%.c=%.o))
+
+
+$(BINARY): $(OBJECTS)
+	$(CC) $(CFLAGS) $(OBJECTS) -o $(BINARY)
+
+$(BUILDDIR)/%.o: %.c
+	$(CC) $(CFLAGS) -I$(HEADERDIR) -I$(dir $<) -c $< -o $@
+
+######################################################################
+######################################################################
+
+
+
+# # symbolic targets:
+# all:	$(BIN).hex
+
+# .c.o:
+# 	$(COMPILE) -c $< -o $@
+
+# .S.o:
+# 	$(COMPILE) -x assembler-with-cpp -c $< -o $@
+# # "-x assembler-with-cpp" should not be necessary since this is the default
+# # file type for the .S (with capital S) extension. However, upper case
+# # characters are not always preserved on Windows. To ensure WinAVR
+# # compatibility define the file type manually.
+
+# .c.s:
+# 	$(COMPILE) -S $< -o $@
+
+# flash:	all
+# 	$(AVRDUDE) -U flash:w:$(BIN).hex:i
+
+# fuse:
+# 	$(AVRDUDE) $(FUSES)
+
+# install: flash fuse
+
+# # if you use a bootloader, change the command below appropriately:
+# load: all
+# 	bootloadHID $(BIN).hex
+
+# clean:
+# 	rm -f $(BIN).hex $(BIN).elf $(OBJECTS)
+
+# # file targets:
+# main.elf: $(OBJECTS)
+# 	$(COMPILE) -o $(BIN).elf $(OBJECTS)
+
+# main.hex: $(BIN).elf
+# 	rm -f $(BIN).hex
+# 	$(OBJCOPY) -j .text -j .data -O ihex $(BIN).elf $(BIN).hex
+# # If you have an EEPROM section, you must also create a hex file for the
+# # EEPROM and add it to the "flash" target.
+
+# # Targets for code debugging and analysis:
+# disasm:	$(BIN).elf
+# 	avr-objdump -d main.elf
+
+# cpp:
+# 	$(COMPILE) -E $(BIN).c
